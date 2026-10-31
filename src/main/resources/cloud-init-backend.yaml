@@ -19,6 +19,7 @@ runcmd:
   - npm install -g pm2
 
   # 3. Clonar repositorio en /opt/app
+  - rm -rf /opt/app
   - git clone -b "${git_branch}" "${repo_url}" /opt/app
   - chown -R ${admin_username}:${admin_username} /opt/app
 
@@ -47,6 +48,7 @@ runcmd:
   - cd /opt/app && set -a && . /opt/app/.env && set +a && npm run seed:student
 
   # 7. Iniciar servicio NestJS con PM2 cargando variables de entorno
+  - cd /opt/app && pm2 delete asistencia-backend 2>/dev/null || true
   - cd /opt/app && pm2 start dist/main.js --name "asistencia-backend" --cwd /opt/app --update-env --node-args="--env-file=/opt/app/.env"
   - pm2 save
   - env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root
@@ -55,4 +57,4 @@ runcmd:
   - (cd /opt/app && set -a && . /opt/app/.env && set +a && npm run seed:demo > /var/log/seed-demo.log 2>&1 &)
 
   # 9. Registrar finalización exitosa
-  - echo "Setup completado exitosamente: $(date)" >> /var/log/asistencia-setup.log
+  - 'echo "Setup completado exitosamente: $(date)" >> /var/log/asistencia-setup.log'

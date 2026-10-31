@@ -19,6 +19,7 @@ runcmd:
   - apt-get install -y nodejs
 
   # 3. Clonar repositorio en /var/www/app
+  - rm -rf /var/www/app
   - git clone -b "${git_branch}" "${repo_url}" /var/www/app
   - chown -R ${admin_username}:${admin_username} /var/www/app
 
@@ -28,10 +29,13 @@ runcmd:
   - chmod -R 755 /var/www/app/dist
 
   # 5. Configurar Nginx (Reverse Proxy /api hacia Backend y Router SPA)
+  - rm -f /etc/nginx/sites-enabled/default
+  - rm -rf /var/www/html/*
   - |
-    cat <<'EOF' > /etc/nginx/sites-available/default
+    cat <<'EOF' > /etc/nginx/conf.d/app.conf
     server {
         listen 80 default_server;
+        listen [::]:80 default_server;
         server_name _;
         root /var/www/app/dist;
         index index.html;
@@ -59,4 +63,4 @@ runcmd:
 
   # 6. Recargar y verificar Nginx
   - nginx -t && systemctl restart nginx && systemctl enable nginx
-  - echo "Setup completado exitosamente: $(date)" >> /var/log/asistencia-setup.log
+  - 'echo "Setup completado exitosamente: $(date)" >> /var/log/asistencia-setup.log'
