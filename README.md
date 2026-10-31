@@ -91,7 +91,7 @@ Este proyecto implementa mecanismos inteligentes para que **nunca tengas que con
 
 1. **Lectura automática de `.env`:** Basta con tener un archivo `.env` en la raíz (puedes crearlo a partir de `.env.example`). Si existe, el código Java lo carga automáticamente sin comandos adicionales.
 2. **Auto-resolución de la IP del Backend:** El Frontend recibe directamente el `Output<String>` de la IP pública del backend generada en Azure. Pulumi espera a que la IP esté lista y la inyecta de forma transparente en el archivo de configuración de Nginx.
-3. **Detección inteligente de Clave SSH:** Si no defines una clave SSH, el sistema busca automáticamente tus claves públicas existentes en `~/.ssh/id_rsa.pub`, `~/.ssh/id_ed25519.pub` o `~/.ssh/asistencia_vm.pub`. Si no tienes ninguna, **genera una clave RSA automáticamente** y guarda la clave privada en `~/.ssh/asistencia_auto_id_rsa`.
+3. **Autenticación Exclusiva por Contraseña:** No necesitas generar ni copiar archivos de claves SSH (`.pub` / `id_rsa`). Puedes conectarte directamente con usuario y contraseña (`ssh azureuser@<ip>`), configurada fácilmente desde `VM_PASSWORD` en `.env`.
 4. **Auto-generación de JWT Secret:** Si no defines `JWT_SECRET`, el sistema genera criptográficamente un secreto aleatorio de 64 caracteres.
 5. **Rama `dev` por defecto:** Clona y arranca automáticamente desde la rama `dev` de ambos repositorios:
    * Backend: `https://github.com/modulo2-IaC/app-asistencia-backend.git`
@@ -154,7 +154,7 @@ Ve a tu repositorio en GitHub: **Settings** > **Secrets and variables** > **Acti
 | `AZURE_SUBSCRIPTION_ID` | ID de la suscripción de Azure donde se desplegará | ✅ Sí |
 | `PULUMI_ACCESS_TOKEN` | Token de acceso de tu cuenta de Pulumi Cloud | ✅ Sí |
 | `DATABASE_URL` | Cadena de conexión PostgreSQL (con `?sslmode=require`) | ✅ Sí |
-| `SSH_PUBLIC_KEY` | Clave pública SSH (opcional, se auto-genera si falta) | ⚪ Opcional |
+| `VM_PASSWORD` | Contraseña de administrador para las VMs (Azure: mín 12 chars, mayús, minús, núm, símb) | ⚪ Opcional |
 | `JWT_SECRET` | Secreto para tokens JWT (opcional, se auto-genera si falta) | ⚪ Opcional |
 
 > **Tip para Azure OIDC:** Si configuras credenciales federadas (OIDC) en tu Service Principal de Azure para GitHub Actions, no necesitas almacenar contraseñas ni `AZURE_CLIENT_SECRET`.

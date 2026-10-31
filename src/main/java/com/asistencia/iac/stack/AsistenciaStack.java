@@ -59,7 +59,8 @@ public class AsistenciaStack {
         ctx.export("frontendUrl",
             frontendVm.publicIpAddress.applyValue(ip -> "http://" + ip));
 
-        // Comandos de administración SSH y verificación
+        // Credenciales y comandos de acceso (Autenticación por contraseña)
+        ctx.export("adminUsername",     Output.of(config.getAdminUsername()));
         ctx.export("sshBackendCmd",
             backendVm.publicIpAddress.applyValue(ip ->
                 "ssh " + config.getAdminUsername() + "@" + ip));

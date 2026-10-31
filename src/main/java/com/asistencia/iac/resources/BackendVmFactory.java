@@ -14,8 +14,6 @@ import com.pulumi.azurenative.compute.inputs.NetworkInterfaceReferenceArgs;
 import com.pulumi.azurenative.compute.inputs.NetworkProfileArgs;
 import com.pulumi.azurenative.compute.inputs.OSDiskArgs;
 import com.pulumi.azurenative.compute.inputs.OSProfileArgs;
-import com.pulumi.azurenative.compute.inputs.SshConfigurationArgs;
-import com.pulumi.azurenative.compute.inputs.SshPublicKeyArgs;
 import com.pulumi.azurenative.compute.inputs.StorageProfileArgs;
 import com.pulumi.azurenative.resources.ResourceGroup;
 import com.asistencia.iac.config.StackConfig;
@@ -31,6 +29,8 @@ import java.util.Map;
 
 /**
  * Factory responsable de crear la Máquina Virtual del Backend NestJS con Cloud-Init.
+ *
+ * Utiliza autenticación exclusiva por contraseña de administrador (sin claves SSH).
  */
 public class BackendVmFactory {
 
@@ -86,17 +86,10 @@ public class BackendVmFactory {
                 .osProfile(OSProfileArgs.builder()
                     .computerName("backend-vm")
                     .adminUsername(config.getAdminUsername())
+                    .adminPassword(config.getVmPassword())
                     .customData(customDataB64)
                     .linuxConfiguration(LinuxConfigurationArgs.builder()
-                        .disablePasswordAuthentication(true)
-                        .ssh(SshConfigurationArgs.builder()
-                            .publicKeys(List.of(
-                                SshPublicKeyArgs.builder()
-                                    .path("/home/" + config.getAdminUsername() + "/.ssh/authorized_keys")
-                                    .keyData(config.getSshPublicKey())
-                                    .build()
-                            ))
-                            .build())
+                        .disablePasswordAuthentication(false)
                         .build())
                     .build())
 

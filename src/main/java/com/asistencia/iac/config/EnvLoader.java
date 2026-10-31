@@ -6,21 +6,18 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * Cargador automático y transparente de archivos .env y variables del entorno.
+ * Cargador portátil y colaborativo de archivos .env y variables de entorno del sistema.
  *
- * Permite ejecutar la infraestructura sin necesidad de escribir comandos
- * manuales como `pulumi config set`.
- *
- * Orden de resolución:
- *   1. Variable de entorno del sistema (System.getenv)
- *   2. Archivo .env local en el directorio de ejecución
- *   3. Archivo .env en directorios superiores o en asistencia-backend
- *   4. Valor por defecto inteligente
+ * Facilita el trabajo colaborativo en equipo:
+ *   - Cualquier desarrollador clona el repositorio, crea su archivo .env local y ejecuta
+ *     pulumi sin necesidad de configurar manualmente decenas de comandos.
+ *   - En entornos CI/CD (GitHub Actions) o contenedores, toma automáticamente las
+ *     variables del sistema (System.getenv).
+ *   - Es 100% independiente de rutas de máquinas locales particulares.
  */
 public class EnvLoader {
 
@@ -33,19 +30,10 @@ public class EnvLoader {
         if (initialized) return;
         initialized = true;
 
-        List<Path> candidatePaths = List.of(
-            Path.of(".env"),
-            Path.of("../.env"),
-            Path.of("../../.env"),
-            Path.of("../../../asistencia-backend/.env"),
-            Path.of("../../../../asistencia-backend/.env")
-        );
-
-        for (Path path : candidatePaths) {
-            if (Files.isRegularFile(path)) {
-                loadFromFile(path);
-                break; // Cargar el primer .env encontrado
-            }
+        // Carga únicamente el archivo .env de la raíz del proyecto
+        Path envPath = Path.of(".env");
+        if (Files.isRegularFile(envPath)) {
+            loadFromFile(envPath);
         }
     }
 
@@ -78,7 +66,7 @@ public class EnvLoader {
 
     /**
      * Obtiene una variable buscando primero en variables de entorno del sistema,
-     * luego en el archivo .env cargado.
+     * luego en el archivo .env local.
      */
     public static Optional<String> get(String key) {
         init();
