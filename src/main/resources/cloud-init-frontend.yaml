@@ -1,201 +1,58 @@
 #cloud-config
 # =============================================================================
-# CLOUD-INIT: Frontend (React + Vite + Nginx)
-# Aprovisionamiento automatizado de la VM en primer arranque
+# CLOUD-INIT: Frontend (React + Vite + Nginx Reverse Proxy)
 # =============================================================================
 
 package_update: true
-package_upgrade: false
 
-# 1. Paquetes del sistema estrictamente necesarios
 packages:
   - git
   - curl
   - nginx
-  - ufw
 
-# 2. Creación declarativa de archivos
-write_files:
-  # Configuración del servidor Nginx con Reverse Proxy, soporte SPA y caché para Vite
-  - path: /etc/nginx/sites-available/asistencia-front
-    owner: root:root
-    permissions: '0644'
-    content: |
-      server {
-          listen 80 default_server;
-          listen [::]:80 default_server;
-
-          root /var/www/asistencia-front/dist;
-          index index.html;
-
-          server_name _;
-
-          # Reverse Proxy transparente hacia el Backend NestJS (puerto ${backend_port})
-          location /api/ {
-              proxy_pass http://${backend_host}:${backend_port}/api/;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-              proxy_connect_timeout 30s;
-              proxy_read_timeout 60s;
-          }
-
-          # Soporte SPA: redirigir todas las rutas a index.html
-          location / {
-              try_files $uri $uri/ /index.html;
-          }
-
-          # Caché optimizada para assets generados por Vite
-          location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-              expires 1y;
-              add_header Cache-Control "public, immutable";
-              try_files $uri =404;
-          }
-
-          # Compresión Gzip
-          gzip on;
-          gzip_vary on;
-          gzip_min_length 1024;
-          gzip_proxied expired no-cache no-store private auth;
-          gzip_types text/plain text/css text/xml text/javascript application/javascript application/json image/svg+xml;
-      }
-
-  # Permiso sudo sin contraseña para que el usuario pueda recargar Nginx
-  - path: /etc/sudoers.d/admin-nginx
-    owner: root:root
-    permissions: '0440'
-    content: |
-      ${admin_username} ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx, /usr/bin/systemctl restart nginx
-
-  # Script utilitario de despliegue y actualización (/usr/local/bin/deploy-frontend.sh)
-  - path: /usr/local/bin/deploy-frontend.sh
-    owner: root:root
-    permissions: '0755'
-    content: |
-      #!/bin/bash
-      set -e
-      echo "=== [Deploy Frontend] Iniciando compilación y despliegue ==="
-      cd /var/www/asistencia-front
-
-      if [ -d .git ]; then
-        echo "[1/4] Actualizando código desde Git (rama ${git_branch})..."
-        git fetch origin ${git_branch} || true
-        git checkout ${git_branch} || true
-        git pull origin ${git_branch} || git pull || true
-      fi
-
-      if [ ! -f package.json ]; then
-        echo "Error: package.json no encontrado en /var/www/asistencia-front"
-        exit 1
-      fi
-
-      echo "[2/4] Instalando dependencias..."
-      npm install
-
-      echo "[3/4] Compilando con Vite..."
-      npm run build
-
-      echo "[4/4] Recargando servidor web Nginx..."
-      sudo systemctl reload nginx
-      echo "=== [Deploy Frontend] Despliegue completado con éxito ==="
-
-# 3. Comandos ejecutados automáticamente al arrancar
 runcmd:
-  # Habilitar 1GB Swap para compilación fluida de Vite / TypeScript
-  - |
-    if [ ! -f /swapfile ]; then
-      fallocate -l 1G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=1024
-      chmod 600 /swapfile
-      mkswap /swapfile
-      swapon /swapfile
-      echo '/swapfile none swap sw 0 0' >> /etc/fstab
-    fi
+  # 1. Habilitar 1GB Swap (evita que Vite/Rollup agote la memoria RAM)
+  - fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
-  # Instalar Node.js LTS
+  # 2. Instalar Node.js LTS
   - curl -fsSL https://deb.nodesource.com/setup_${node_version}.x | bash -
   - apt-get install -y nodejs
 
-  # Preparar directorios base
-  - mkdir -p /var/www/asistencia-front/dist /home/${admin_username}
+  # 3. Clonar repositorio en /var/www/app
+  - git clone -b "${git_branch}" "${repo_url}" /var/www/app
+  - chown -R ${admin_username}:${admin_username} /var/www/app
 
-  # Crear página temporal de inicialización con auto-refresco
+  # 4. Configurar variables de entorno (.env de Vite) y compilar
+  - echo "VITE_API_URL=${vite_api_url}" > /var/www/app/.env
+  - cd /var/www/app && npm install && npm run build
+
+  # 5. Configurar Nginx (Reverse Proxy /api/ hacia Backend y Router SPA)
   - |
-    cat <<'EOF' > /var/www/asistencia-front/dist/index.html
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <meta http-equiv="refresh" content="5">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Inicializando - Control de Asistencia</title>
-      <style>
-        body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#f8fafc;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:1rem}
-        .card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:2.5rem;text-align:center;max-width:520px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5)}
-        h1{font-size:1.5rem;color:#38bdf8;margin:0 0 1rem}
-        p{color:#94a3b8;font-size:1rem;line-height:1.6;margin:0 0 1.5rem}
-        .spinner{width:40px;height:40px;margin:0 auto 1.5rem;border:3px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .badge{display:inline-block;padding:0.25rem 0.75rem;background:#0369a1;color:#e0f2fe;border-radius:9999px;font-size:0.8rem;font-weight:600;margin-bottom:1rem}
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <div class="spinner"></div>
-        <span class="badge">Aprovisionamiento Automático</span>
-        <h1>Compilando Sistema de Asistencia</h1>
-        <p>La máquina virtual está instalando dependencias y compilando la aplicación web. Esta página se actualizará automáticamente en unos instantes...</p>
-      </div>
-    </body>
-    </html>
-    EOF
-    chmod 644 /var/www/asistencia-front/dist/index.html
+    cat <<'EOF' > /etc/nginx/sites-available/default
+    server {
+        listen 80 default_server;
+        server_name _;
+        root /var/www/app/dist;
+        index index.html;
 
-  # Activar configuración de Nginx
-  - rm -f /etc/nginx/sites-enabled/default
-  - ln -sf /etc/nginx/sites-available/asistencia-front /etc/nginx/sites-enabled/
+        # Proxy reverso hacia la API Backend
+        location /api/ {
+            proxy_pass http://${backend_host}:${backend_port}/api/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+        }
+
+        # Soporte para React Router (SPA)
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+    EOF
+
+  # 6. Recargar Nginx
   - nginx -t && systemctl restart nginx && systemctl enable nginx
-
-  # Clonar repositorio Git en la rama correspondiente (dev por defecto)
-  - |
-    if [ -n "${repo_url}" ] && [ ! -d /var/www/asistencia-front/.git ]; then
-      git config --system --add safe.directory /var/www/asistencia-front
-      git clone -b "${git_branch}" "${repo_url}" /tmp/repo
-      cp -a /tmp/repo/. /var/www/asistencia-front/
-      rm -rf /tmp/repo
-    fi
-
-  # Escribir archivo .env para Vite
-  - |
-    cat <<'EOF' > /var/www/asistencia-front/.env
-    VITE_API_URL=${vite_api_url}
-    EOF
-    chmod 644 /var/www/asistencia-front/.env
-
-  # Ajustar permisos para el usuario administrador
-  - chown -R ${admin_username}:${admin_username} /var/www/asistencia-front
-
-  # Crear enlace simbólico para que el usuario pueda ejecutar ~/deploy.sh
-  - ln -sf /usr/local/bin/deploy-frontend.sh /home/${admin_username}/deploy.sh
-  - chown -h ${admin_username}:${admin_username} /home/${admin_username}/deploy.sh
-
-  # Configurar firewall local UFW
-  - ufw allow 22/tcp || true
-  - ufw allow 80/tcp || true
-  - ufw --force enable || true
-
-  # Despliegue inicial (npm install + npm run build + systemctl reload nginx)
-  - |
-    if [ -f /var/www/asistencia-front/package.json ]; then
-      su - ${admin_username} -c "/usr/local/bin/deploy-frontend.sh"
-      chmod -R 755 /var/www/asistencia-front/dist
-    fi
-
-  # Registrar finalización en log del sistema
-  - 'echo "Cloud-init frontend completado: $(date)" >> /var/log/asistencia-setup.log'
-
-final_message: "Frontend React/Vite listo y servido por Nginx en el puerto 80 (rama ${git_branch})"
+  - echo "Setup completado" >> /var/log/asistencia-setup.log
