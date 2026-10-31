@@ -58,9 +58,9 @@ hardware/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml              # CI/CD automatizado con GitHub Actions
-├── .env.example                    # Plantilla de variables de entorno
+├── config.yaml.example             # Plantilla estructurada de variables en YAML
 ├── .gitignore                      # Exclusión de archivos sensibles y compilados
-├── pom.xml                         # Dependencias Maven (Pulumi Java SDK, azure-native)
+├── pom.xml                         # Dependencias Maven (Pulumi Java SDK, azure-native, SnakeYAML)
 ├── Pulumi.yaml                     # Definición del proyecto Pulumi unificado
 ├── Pulumi.dev.yaml                 # Configuración del stack dev
 ├── README.md                       # Documentación completa (este archivo)
@@ -71,8 +71,8 @@ hardware/
     └── java/com/asistencia/iac/
         ├── App.java                 # Punto de entrada de la aplicación
         ├── config/
-        │   ├── EnvLoader.java       # Carga automática transparente de .env
-        │   └── StackConfig.java     # Configuración con resolución automática (SSH, JWT, BD)
+        │   ├── YamlConfigLoader.java# Carga automática con SnakeYAML y System.getenv
+        │   └── StackConfig.java     # Configuración centralizada de infraestructura
         ├── stack/
         │   └── AsistenciaStack.java # Orquestador del grafo de dependencias
         └── resources/
@@ -89,10 +89,10 @@ hardware/
 
 Este proyecto implementa mecanismos inteligentes para que **nunca tengas que configurar variables a mano**:
 
-1. **Lectura automática de `.env`:** Basta con tener un archivo `.env` en la raíz (puedes crearlo a partir de `.env.example`). Si existe, el código Java lo carga automáticamente sin comandos adicionales.
+1. **Configuración Estructurada con YAML (`SnakeYAML`):** La configuración se gestiona mediante un archivo jerárquico y legible `config.yaml` (creado a partir de `config.yaml.example`), procesado mediante la dependencia oficial `org.yaml:snakeyaml` en Maven.
 2. **Auto-resolución de la IP del Backend:** El Frontend recibe directamente el `Output<String>` de la IP pública del backend generada en Azure. Pulumi espera a que la IP esté lista y la inyecta de forma transparente en el archivo de configuración de Nginx.
-3. **Autenticación Exclusiva por Contraseña:** No necesitas generar ni copiar archivos de claves SSH (`.pub` / `id_rsa`). Puedes conectarte directamente con usuario y contraseña (`ssh azureuser@<ip>`), configurada fácilmente desde `VM_PASSWORD` en `.env`.
-4. **Auto-generación de JWT Secret:** Si no defines `JWT_SECRET`, el sistema genera criptográficamente un secreto aleatorio de 64 caracteres.
+3. **Autenticación Exclusiva por Contraseña:** No necesitas generar ni copiar archivos de claves SSH (`.pub` / `id_rsa`). Puedes conectarte directamente con usuario y contraseña (`ssh azureuser@<ip>`), configurada fácilmente desde `vm.password` en `config.yaml`.
+4. **Auto-generación de JWT Secret:** Si no defines `jwt_secret`, el sistema genera criptográficamente un secreto aleatorio de 64 caracteres.
 5. **Rama `dev` por defecto:** Clona y arranca automáticamente desde la rama `dev` de ambos repositorios:
    * Backend: `https://github.com/modulo2-IaC/app-asistencia-backend.git`
    * Frontend: `https://github.com/modulo2-IaC/app-asistencia-frontend.git`
@@ -107,16 +107,17 @@ Este proyecto implementa mecanismos inteligentes para que **nunca tengas que con
 * [Pulumi CLI 3.x+](https://www.pulumi.com/docs/install/)
 * [Azure CLI](https://learn.microsoft.com/es-es/cli/azure/install-azure-cli) autenticado (`az login`)
 
-### 2. Configurar el archivo `.env`
+### 2. Configurar el archivo `config.yaml`
 Copia la plantilla y coloca la URL de tu base de datos PostgreSQL (ej. Neon):
 
 ```powershell
-cp .env.example .env
+cp config.yaml.example config.yaml
 ```
 
-Edita `.env` con la URL de tu base de datos:
-```ini
-DATABASE_URL=postgresql://neondb_owner:tu_password@ep-misty-scene...neon.tech/neondb?sslmode=require
+Edita `config.yaml` con la URL de tu base de datos y tus preferencias:
+```yaml
+database:
+  url: postgresql://neondb_owner:tu_password@ep-misty-scene...neon.tech/neondb?sslmode=require
 ```
 
 ### 3. Vista previa y Despliegue

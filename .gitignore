@@ -9,6 +9,8 @@ target/
 # Secretos y Entornos locales (¡NUNCA subir a Git!)
 .env
 .env.local
+config.yaml
+!config.yaml.example
 *.pem
 *.key
 id_rsa*

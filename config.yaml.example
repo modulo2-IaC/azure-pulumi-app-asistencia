@@ -1,0 +1,38 @@
+# =============================================================================
+# PLANTILLA DE CONFIGURACIÓN DE HARDWARE (ASISTENCIA - AZURE)
+# Copia este archivo a config.yaml para desplegar la infraestructura:
+# cp config.yaml.example config.yaml
+# =============================================================================
+
+azure:
+  location: swedencentral
+  environment: dev
+  resource_group: rg-asistencia-hardware-dev
+
+vm:
+  size: Standard_B2as_v2
+  admin_username: azureuser
+  # Contraseña de administrador para las VMs (Azure: mín 12 chars, mayús, minús, núm, símb)
+  password: TuPasswordSeguro2026!
+
+database:
+  # Cadena de conexión PostgreSQL (ej. Neon Serverless con SSL)
+  url: postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
+
+app:
+  # Si se deja vacío, el sistema generará automáticamente un secreto seguro de 64 caracteres
+  jwt_secret: tu_secreto_super_seguro_jwt_2026
+  port: 3000
+  cors_origin: "*"
+  timezone: America/La_Paz
+  run_migrations: true
+  admin_registration_no: "123456789"
+  admin_password: "123456789"
+  admin_full_name: ADMIN
+
+repositories:
+  backend_url: https://github.com/modulo2-IaC/app-asistencia-backend.git
+  frontend_url: https://github.com/modulo2-IaC/app-asistencia-frontend.git
+  branch: dev
+  vite_api_url: /api/v1/
+  node_version: "20"
