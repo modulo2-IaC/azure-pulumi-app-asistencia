@@ -112,7 +112,7 @@ public class BackendVmFactory {
         );
 
         Output<String> publicIpAddress = net.publicIp.ipAddress()
-            .applyValue(ip -> ip.orElse("(IP asignada al arrancar la VM)"));
+            .applyValue(ip -> ip.filter(s -> !s.isBlank() && !s.contains(" ")).orElse("127.0.0.1"));
 
         return new BackendVmResult(vm, publicIpAddress);
     }

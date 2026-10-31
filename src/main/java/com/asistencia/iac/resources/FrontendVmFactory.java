@@ -118,7 +118,7 @@ public class FrontendVmFactory {
         );
 
         Output<String> publicIpAddress = net.publicIp.ipAddress()
-            .applyValue(ip -> ip.orElse("(IP asignada al arrancar la VM)"));
+            .applyValue(ip -> ip.filter(s -> !s.isBlank() && !s.contains(" ")).orElse("127.0.0.1"));
 
         return new FrontendVmResult(vm, publicIpAddress);
     }
@@ -127,7 +127,9 @@ public class FrontendVmFactory {
         String template = loadTemplate("cloud-init-frontend.yaml");
 
         return backendPublicIp.applyValue(backendIp -> {
-            String cleanBackendHost = backendIp.isBlank() ? "127.0.0.1" : backendIp.trim();
+            String cleanBackendHost = (backendIp != null && !backendIp.isBlank() && !backendIp.contains(" "))
+                ? backendIp.trim()
+                : "127.0.0.1";
 
             return template
                 .replace("${admin_username}", config.getAdminUsername())
