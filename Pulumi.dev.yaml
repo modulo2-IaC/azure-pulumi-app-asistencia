@@ -1,0 +1,6 @@
+config:
+  azure-native:location: swedencentral
+  hardware:environment: "dev"
+  hardware:adminUsername: "azureuser"
+  hardware:vmSize: "Standard_B2as_v2"
+  hardware:gitBranch: "dev"

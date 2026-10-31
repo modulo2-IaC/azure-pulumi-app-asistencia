@@ -1,0 +1,118 @@
+name: 🚀 CI/CD Pulumi Azure Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Acción a ejecutar (preview / up)'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - up
+      stack:
+        description: 'Nombre del stack de Pulumi'
+        required: true
+        default: 'dev'
+
+permissions:
+  id-token: write  # Requerido para autenticación OIDC con Azure
+  contents: read
+  pull-requests: write # Para publicar el diff de vista previa en PRs
+
+jobs:
+  # ── 1. JOB DE VISTA PREVIA (Pull Requests y workflow_dispatch 'preview') ───
+  preview:
+    name: 🔍 Pulumi Preview
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.action == 'preview')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: 🔐 Autenticar en Azure (OIDC o Service Principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ☁️ Instalar Pulumi CLI
+        uses: pulumi/actions@v5
+
+      - name: 🔨 Compilar proyecto Maven
+        run: mvn clean compile -B
+
+      - name: 🧪 Ejecutar Pulumi Preview
+        uses: pulumi/actions@v5
+        with:
+          command: preview
+          stack-name: ${{ github.event.inputs.stack || 'dev' }}
+          comment-on-pr: true
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+
+  # ── 2. JOB DE DESPLIEGUE (Push a main/dev y workflow_dispatch 'up') ────────
+  deploy:
+    name: 🚀 Pulumi Deploy
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || (github.event_name == 'workflow_dispatch' && inputs.action == 'up')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: 🔐 Autenticar en Azure (OIDC o Service Principal)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ☁️ Instalar Pulumi CLI
+        uses: pulumi/actions@v5
+
+      - name: 🔨 Compilar proyecto Maven
+        run: mvn clean compile -B
+
+      - name: 🚀 Ejecutar Pulumi Up
+        uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: ${{ github.event.inputs.stack || 'dev' }}
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}

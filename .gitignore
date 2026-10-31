@@ -1,0 +1,30 @@
+# Pulumi state y backups locales
+.pulumi/
+
+# Java / Maven
+target/
+*.class
+*.jar
+
+# Secretos y Entornos locales (¡NUNCA subir a Git!)
+.env
+.env.local
+*.pem
+*.key
+id_rsa*
+*.pub
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Sistema y Logs
+*.log
+.DS_Store
+Thumbs.db

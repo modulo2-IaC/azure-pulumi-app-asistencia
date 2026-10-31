@@ -1,0 +1,3 @@
+name: asistencia-azure-hardware
+runtime: java
+description: Infraestructura unificada en Azure (VMs Backend NestJS + Frontend React/Vite con Cloud-Init)

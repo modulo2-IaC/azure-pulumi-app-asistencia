@@ -1,0 +1,148 @@
+#cloud-config
+# =============================================================================
+# CLOUD-INIT: Backend (NestJS + Node.js + PM2)
+# Aprovisionamiento automatizado de la VM en primer arranque
+# =============================================================================
+
+package_update: true
+package_upgrade: false
+
+# 1. Paquetes del sistema base estrictamente necesarios
+packages:
+  - git
+  - curl
+  - build-essential
+  - ufw
+
+# 2. Creación declarativa de archivos en el sistema base
+write_files:
+  # Script utilitario de despliegue y actualización (/usr/local/bin/deploy-backend.sh)
+  - path: /usr/local/bin/deploy-backend.sh
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+      echo "=== [Deploy Backend] Iniciando compilación y despliegue ==="
+      cd /opt/asistencia-backend
+
+      if [ -d .git ]; then
+        echo "[1/6] Actualizando código desde Git (rama ${git_branch})..."
+        git fetch origin ${git_branch} || true
+        git checkout ${git_branch} || true
+        git pull origin ${git_branch} || git pull || true
+      fi
+
+      if [ ! -f package.json ]; then
+        echo "Error: package.json no encontrado en /opt/asistencia-backend"
+        exit 1
+      fi
+
+      echo "[2/6] Instalando dependencias de Node.js..."
+      npm install --production=false
+
+      echo "[3/6] Compilando NestJS..."
+      npm run build
+
+      echo "[4/6] Ejecutando migraciones de base de datos..."
+      npm run migration:run || true
+
+      echo "[5/6] Sembrando cuentas iniciales (Admin y Estudiante)..."
+      npm run seed:admin || true
+      npm run seed:student || true
+      npm run seed:demo || true
+
+      echo "[6/6] Reiniciando servicio con PM2..."
+      pm2 restart /opt/asistencia-backend/ecosystem.config.js || pm2 start /opt/asistencia-backend/ecosystem.config.js
+      pm2 save
+      echo "=== [Deploy Backend] Despliegue completado con éxito ==="
+
+# 3. Comandos ejecutados automáticamente al arrancar
+runcmd:
+  # Habilitar 1GB Swap para evitar Out-Of-Memory durante la compilación TypeScript
+  - |
+    if [ ! -f /swapfile ]; then
+      fallocate -l 1G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=1024
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      echo '/swapfile none swap sw 0 0' >> /etc/fstab
+    fi
+
+  # Instalar Node.js LTS y PM2
+  - curl -fsSL https://deb.nodesource.com/setup_${node_version}.x | bash -
+  - apt-get install -y nodejs
+  - npm install -g pm2
+
+  # Preparar directorios de trabajo y logs
+  - mkdir -p /var/log/pm2 /opt/asistencia-backend /home/${admin_username}
+  - chown -R ${admin_username}:${admin_username} /var/log/pm2
+
+  # Configurar servicio systemd para que PM2 arranque con el usuario administrador
+  - env PATH=$PATH:/usr/bin pm2 startup systemd -u ${admin_username} --hp /home/${admin_username}
+
+  # Clonar repositorio Git en la rama correspondiente (dev por defecto)
+  - |
+    if [ -n "${repo_url}" ] && [ ! -d /opt/asistencia-backend/.git ]; then
+      git config --system --add safe.directory /opt/asistencia-backend
+      git clone -b "${git_branch}" "${repo_url}" /opt/asistencia-backend
+    fi
+
+  # Escribir archivo .env con credenciales seguras
+  - |
+    cat <<'EOF' > /opt/asistencia-backend/.env
+    NODE_ENV=production
+    PORT=${app_port}
+    DATABASE_URL=${database_url}
+    JWT_SECRET=${jwt_secret}
+    CORS_ORIGIN=${cors_origin}
+    APP_TIMEZONE=${app_timezone}
+    RUN_MIGRATIONS=${run_migrations}
+    ADMIN_REGISTRATION_NO=${admin_registration_no}
+    ADMIN_PASSWORD=${admin_password}
+    ADMIN_FULL_NAME=${admin_full_name}
+    EOF
+    chmod 600 /opt/asistencia-backend/.env
+
+  # Escribir archivo ecosystem.config.js para PM2
+  - |
+    cat <<'EOF' > /opt/asistencia-backend/ecosystem.config.js
+    module.exports = {
+      apps: [{
+        name: 'asistencia-backend',
+        script: 'dist/main.js',
+        cwd: '/opt/asistencia-backend',
+        instances: 1,
+        autorestart: true,
+        watch: false,
+        env_file: '/opt/asistencia-backend/.env',
+        error_file: '/var/log/pm2/asistencia-error.log',
+        out_file:   '/var/log/pm2/asistencia-out.log',
+        log_date_format: 'YYYY-MM-DD HH:mm:ss'
+      }]
+    };
+    EOF
+    chmod 644 /opt/asistencia-backend/ecosystem.config.js
+
+  # Asignar permisos al usuario administrador en /opt/asistencia-backend
+  - chown -R ${admin_username}:${admin_username} /opt/asistencia-backend
+
+  # Crear enlace simbólico para que el usuario pueda ejecutar ~/deploy.sh
+  - ln -sf /usr/local/bin/deploy-backend.sh /home/${admin_username}/deploy.sh
+  - chown -h ${admin_username}:${admin_username} /home/${admin_username}/deploy.sh
+
+  # Configurar firewall local UFW
+  - ufw allow 22/tcp || true
+  - ufw allow ${app_port}/tcp || true
+  - ufw --force enable || true
+
+  # Despliegue inicial (compilación, migración, semillas e inicio con PM2)
+  - |
+    if [ -f /opt/asistencia-backend/package.json ]; then
+      su - ${admin_username} -c "/usr/local/bin/deploy-backend.sh"
+    fi
+
+  # Registrar finalización en log del sistema
+  - 'echo "Cloud-init backend completado: $(date)" >> /var/log/asistencia-setup.log'
+
+final_message: "Backend NestJS listo en el puerto ${app_port} (rama ${git_branch})"

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.asistencia.iac</groupId>
+    <artifactId>asistencia-azure-hardware</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Asistencia - Azure Hardware Unified Infrastructure</name>
+    <description>Stack unificado de Pulumi Java para aprovisionar Backend y Frontend en Azure VMs con Cloud-Init</description>
+
+    <properties>
+        <maven.compiler.release>11</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <pulumi.version>0.11.0</pulumi.version>
+        <pulumi.azure-native.version>2.67.0</pulumi.azure-native.version>
+        <mainClass>com.asistencia.iac.App</mainClass>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.pulumi</groupId>
+            <artifactId>pulumi</artifactId>
+            <version>${pulumi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.pulumi</groupId>
+            <artifactId>azure-native</artifactId>
+            <version>${pulumi.azure-native.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <mainClass>com.asistencia.iac.App</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.asistencia.iac.App</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
