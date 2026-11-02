@@ -13,7 +13,7 @@ flowchart TD
     Client["💻 Navegador del Usuario / Cliente Web"]
 
     subgraph AzureCloud ["☁️ Microsoft Azure (swedencentral)"]
-        subgraph UnifiedRG ["📦 Resource Group: rg-asistencia-hardware-dev"]
+        subgraph UnifiedRG ["📦 Resource Group: rg-pulumi-asistencia-hardware-dev"]
             
             subgraph FrontSub ["🌐 Frontend (React + Vite + Nginx)"]
                 VNet_Front["VNet 10.1.0.0/16<br/>Subnet 10.1.1.0/24"]

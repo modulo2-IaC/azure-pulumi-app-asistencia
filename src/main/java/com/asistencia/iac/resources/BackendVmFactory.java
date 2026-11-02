@@ -142,7 +142,9 @@ public class BackendVmFactory {
                 .replace("${run_migrations}",        config.getRunMigrations())
                 .replace("${admin_registration_no}", config.getAdminRegistrationNo())
                 .replace("${admin_password}",        adminPassword)
-                .replace("${admin_full_name}",       config.getAdminFullName());
+                .replace("${admin_full_name}",       config.getAdminFullName())
+                .replace("${ambiente}",              config.getEnvironment())
+                .replace("${environment}",           config.getEnvironment());
         });
     }
 

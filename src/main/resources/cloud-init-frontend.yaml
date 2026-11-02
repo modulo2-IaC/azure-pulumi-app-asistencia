@@ -1,66 +1,52 @@
 #cloud-config
-# =============================================================================
-# CLOUD-INIT: Frontend (React + Vite + Nginx Reverse Proxy)
-# =============================================================================
-
 package_update: true
-
 packages:
+  - nginx
   - git
   - curl
-  - nginx
+  - build-essential
+
+write_files:
+  - path: /etc/asistencia-frontend.env
+    permissions: "0600"
+    content: |
+      VITE_API_URL=${vite_api_url}
+
+  - path: /etc/nginx/sites-available/asistencia-frontend
+    content: |
+      server {
+          listen 80 default_server;
+          listen [::]:80 default_server;
+          server_name _;
+          root /var/www/app/dist;
+          index index.html;
+
+          location /api {
+              proxy_pass http://${backend_host}:${backend_port};
+              proxy_http_version 1.1;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_connect_timeout 60s;
+              proxy_read_timeout 120s;
+          }
+
+          location / {
+              try_files $uri $uri/ /index.html;
+          }
+      }
 
 runcmd:
-  # 1. Habilitar 1GB Swap (evita que Vite/Rollup agote la memoria RAM)
   - fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab
-
-  # 2. Instalar Node.js LTS
-  - curl -fsSL https://deb.nodesource.com/setup_${node_version}.x | bash -
-  - apt-get install -y nodejs
-
-  # 3. Clonar repositorio en /var/www/app
-  - rm -rf /var/www/app
-  - git clone -b "${git_branch}" "${repo_url}" /var/www/app
-  - chown -R ${admin_username}:${admin_username} /var/www/app
-
-  # 4. Configurar variables de entorno (.env de Vite), compilar y ajustar permisos
-  - echo "VITE_API_URL=${vite_api_url}" > /var/www/app/.env
+  - apt-get purge -y nodejs npm 2>/dev/null || true
+  - curl -fsSL https://deb.nodesource.com/setup_${node_version}.x | bash - && apt-get install -y -o Dpkg::Options::="--force-overwrite" nodejs
+  - rm -rf /var/www/app && git clone -b "${git_branch}" "${repo_url}" /var/www/app
+  - cp /etc/asistencia-frontend.env /var/www/app/.env
   - cd /var/www/app && npm install && npm run build
-  - chmod -R 755 /var/www/app/dist
-
-  # 5. Configurar Nginx (Reverse Proxy /api hacia Backend y Router SPA)
-  - rm -f /etc/nginx/sites-enabled/default
-  - rm -rf /var/www/html/*
-  - |
-    cat <<'EOF' > /etc/nginx/conf.d/app.conf
-    server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
-        server_name _;
-        root /var/www/app/dist;
-        index index.html;
-
-        # Proxy reverso transparente hacia la API Backend
-        location /api {
-            proxy_pass http://${backend_host}:${backend_port};
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_connect_timeout 60s;
-            proxy_read_timeout 120s;
-        }
-
-        # Soporte para React Router (SPA)
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-    }
-    EOF
-
-  # 6. Recargar y verificar Nginx
+  - chown -R www-data:www-data /var/www/app && chmod -R 755 /var/www/app/dist
+  - rm -f /etc/nginx/sites-enabled/default && ln -sf /etc/nginx/sites-available/asistencia-frontend /etc/nginx/sites-enabled/asistencia-frontend
   - nginx -t && systemctl restart nginx && systemctl enable nginx
-  - 'echo "Setup completado exitosamente: $(date)" >> /var/log/asistencia-setup.log'
+  - 'echo "Setup Frontend completado exitosamente: $(date)" >> /var/log/asistencia-setup.log'

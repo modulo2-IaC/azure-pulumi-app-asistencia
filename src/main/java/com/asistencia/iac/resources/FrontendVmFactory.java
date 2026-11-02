@@ -138,7 +138,9 @@ public class FrontendVmFactory {
                 .replace("${backend_port}",   config.getAppPort())
                 .replace("${vite_api_url}",   config.getViteApiUrl())
                 .replace("${repo_url}",       config.getFrontendRepoUrl())
-                .replace("${git_branch}",     config.getGitBranch());
+                .replace("${git_branch}",     config.getGitBranch())
+                .replace("${ambiente}",       config.getEnvironment())
+                .replace("${environment}",    config.getEnvironment());
         });
     }
 

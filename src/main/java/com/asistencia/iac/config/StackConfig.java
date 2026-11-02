@@ -56,7 +56,7 @@ public class StackConfig {
             .orElseGet(() -> YamlConfigLoader.get("azure.environment", "ENVIRONMENT", "dev"));
 
         this.resourceGroupName = appConfig.get("resourceGroupName")
-            .orElseGet(() -> YamlConfigLoader.get("azure.resource_group", "RESOURCE_GROUP_NAME", "rg-asistencia-hardware-" + environment));
+            .orElseGet(() -> YamlConfigLoader.get("azure.resource_group", "RESOURCE_GROUP_NAME", "rg-pulumi-asistencia-hardware-" + environment));
 
         // VM Specs & Password
         this.vmSize = appConfig.get("vmSize")

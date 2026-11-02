@@ -7,7 +7,7 @@
 azure:
   location: swedencentral
   environment: dev
-  resource_group: rg-asistencia-hardware-dev
+  resource_group: rg-pulumi-asistencia-hardware-dev
 
 vm:
   size: Standard_B2as_v2

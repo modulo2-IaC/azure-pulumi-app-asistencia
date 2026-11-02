@@ -1,60 +1,53 @@
 #cloud-config
-# =============================================================================
-# CLOUD-INIT: Backend (NestJS + PostgreSQL + PM2)
-# =============================================================================
-
 package_update: true
-
 packages:
   - git
   - curl
+  - build-essential
+
+write_files:
+  - path: /etc/asistencia-backend.env
+    permissions: "0600"
+    content: |
+      PORT=${app_port}
+      AMBIENTE=${ambiente}
+      NODE_ENV=production
+      DATABASE_URL=${database_url}
+      JWT_SECRET=${jwt_secret}
+      CORS_ORIGIN=${cors_origin}
+      APP_TIMEZONE=${app_timezone}
+      RUN_MIGRATIONS=${run_migrations}
+      ADMIN_REGISTRATION_NO=${admin_registration_no}
+      ADMIN_PASSWORD=${admin_password}
+      ADMIN_FULL_NAME=${admin_full_name}
+
+  - path: /etc/systemd/system/asistencia-backend.service
+    content: |
+      [Unit]
+      Description=Asistencia Backend NestJS
+      After=network.target
+
+      [Service]
+      WorkingDirectory=/opt/app
+      EnvironmentFile=/etc/asistencia-backend.env
+      ExecStart=/usr/bin/node dist/main.js
+      Restart=always
+      RestartSec=5
+      User=asistenciaapp
+
+      [Install]
+      WantedBy=multi-user.target
 
 runcmd:
-  # 1. Habilitar 1GB Swap (evita que TypeScript agote la memoria RAM)
   - fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab
-
-  # 2. Instalar Node.js LTS y PM2
-  - curl -fsSL https://deb.nodesource.com/setup_${node_version}.x | bash -
-  - apt-get install -y nodejs
-  - npm install -g pm2
-
-  # 3. Clonar repositorio en /opt/app
-  - rm -rf /opt/app
-  - git clone -b "${git_branch}" "${repo_url}" /opt/app
-  - chown -R ${admin_username}:${admin_username} /opt/app
-
-  # 4. Generar archivo .env
-  - |
-    cat <<'EOF' > /opt/app/.env
-    PORT=${app_port}
-    DATABASE_URL=${database_url}
-    JWT_SECRET=${jwt_secret}
-    CORS_ORIGIN=${cors_origin}
-    APP_TIMEZONE=${app_timezone}
-    RUN_MIGRATIONS=${run_migrations}
-    ADMIN_REGISTRATION_NO=${admin_registration_no}
-    ADMIN_PASSWORD=${admin_password}
-    ADMIN_FULL_NAME=${admin_full_name}
-    NODE_ENV=production
-    EOF
-    chmod 600 /opt/app/.env
-
-  # 5. Compilar proyecto TypeScript
+  - apt-get purge -y nodejs npm 2>/dev/null || true
+  - curl -fsSL https://deb.nodesource.com/setup_${node_version}.x | bash - && apt-get install -y -o Dpkg::Options::="--force-overwrite" nodejs
+  - rm -rf /opt/app && git clone -b "${git_branch}" "${repo_url}" /opt/app
+  - cp /etc/asistencia-backend.env /opt/app/.env
   - cd /opt/app && npm install && npm run build
-
-  # 6. Ejecutar migraciones y sembrar cuentas iniciales para login inmediato
-  - cd /opt/app && set -a && . /opt/app/.env && set +a && npm run migration:run
-  - cd /opt/app && set -a && . /opt/app/.env && set +a && npm run seed:admin
-  - cd /opt/app && set -a && . /opt/app/.env && set +a && npm run seed:student
-
-  # 7. Iniciar servicio NestJS con PM2 cargando variables de entorno
-  - cd /opt/app && pm2 delete asistencia-backend 2>/dev/null || true
-  - cd /opt/app && pm2 start dist/main.js --name "asistencia-backend" --cwd /opt/app --update-env --node-args="--env-file=/opt/app/.env"
-  - pm2 save
-  - env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root
-
-  # 8. Sembrar datos de demostración en segundo plano (no bloquea el login)
-  - (cd /opt/app && set -a && . /opt/app/.env && set +a && npm run seed:demo > /var/log/seed-demo.log 2>&1 &)
-
-  # 9. Registrar finalización exitosa
-  - 'echo "Setup completado exitosamente: $(date)" >> /var/log/asistencia-setup.log'
+  - cd /opt/app && set -a && . /etc/asistencia-backend.env && set +a && (npm run migration:run || (sleep 3 && npm run migration:run)) && npm run seed:admin && npm run seed:student
+  - useradd --system --no-create-home asistenciaapp || true
+  - chown -R asistenciaapp:asistenciaapp /opt/app
+  - systemctl daemon-reload && systemctl enable --now asistencia-backend
+  - (cd /opt/app && set -a && . /etc/asistencia-backend.env && set +a && npm run seed:demo > /dev/null 2>&1 &)
+  - 'echo "Setup Backend completado exitosamente: $(date)" >> /var/log/asistencia-setup.log'

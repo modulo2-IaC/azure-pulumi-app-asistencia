@@ -74,8 +74,14 @@ public class AsistenciaStack {
         ctx.export("checkFrontendLogsCmd",
             frontendVm.publicIpAddress.applyValue(ip ->
                 "ssh " + config.getAdminUsername() + "@" + ip + " 'cat /var/log/asistencia-setup.log'"));
+        ctx.export("checkBackendStatusCmd",
+            backendVm.publicIpAddress.applyValue(ip ->
+                "ssh " + config.getAdminUsername() + "@" + ip + " 'systemctl status asistencia-backend'"));
+        ctx.export("checkFrontendStatusCmd",
+            frontendVm.publicIpAddress.applyValue(ip ->
+                "ssh " + config.getAdminUsername() + "@" + ip + " 'systemctl status nginx'"));
         ctx.export("checkPm2Cmd",
             backendVm.publicIpAddress.applyValue(ip ->
-                "ssh " + config.getAdminUsername() + "@" + ip + " 'pm2 status'"));
+                "ssh " + config.getAdminUsername() + "@" + ip + " 'systemctl status asistencia-backend'"));
     }
 }

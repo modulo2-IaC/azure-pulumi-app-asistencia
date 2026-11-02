@@ -29,6 +29,9 @@ public class YamlConfigLoader {
         initialized = true;
 
         Path path = Path.of("config.yaml");
+        if (!Files.isRegularFile(path)) {
+            path = Path.of("IAC/azure/Pulumi/hardware/config.yaml");
+        }
         if (Files.isRegularFile(path)) {
             try (InputStream in = Files.newInputStream(path)) {
                 Yaml yaml = new Yaml();
