@@ -50,7 +50,7 @@ public class StackConfig {
         // Azure & Resource Group
         this.location = appConfig.get("location")
             .orElseGet(() -> azureConfig.get("location")
-                .orElseGet(() -> YamlConfigLoader.get("azure.location", "AZURE_LOCATION", "swedencentral")));
+                .orElseGet(() -> YamlConfigLoader.get("azure.location", "AZURE_LOCATION", "eastus2")));
 
         this.environment = appConfig.get("environment")
             .orElseGet(() -> YamlConfigLoader.get("azure.environment", "ENVIRONMENT", "dev"));
@@ -60,7 +60,7 @@ public class StackConfig {
 
         // VM Specs & Password
         this.vmSize = appConfig.get("vmSize")
-            .orElseGet(() -> YamlConfigLoader.get("vm.size", "VM_SIZE", "Standard_B2as_v2"));
+            .orElseGet(() -> YamlConfigLoader.get("vm.size", "VM_SIZE", "Standard_D2as_v7"));
 
         this.adminUsername = appConfig.get("adminUsername")
             .orElseGet(() -> YamlConfigLoader.get("vm.admin_username", "ADMIN_USERNAME", "azureuser"));

@@ -12,14 +12,14 @@ Este proyecto unifica en un **único grafo de recursos** tanto la capa de **Back
 flowchart TD
     Client["💻 Navegador del Usuario / Cliente Web"]
 
-    subgraph AzureCloud ["☁️ Microsoft Azure (swedencentral)"]
+    subgraph AzureCloud ["☁️ Microsoft Azure (eastus2)"]
         subgraph UnifiedRG ["📦 Resource Group: rg-pulumi-asistencia-hardware-dev"]
             
             subgraph FrontSub ["🌐 Frontend (React + Vite + Nginx)"]
                 VNet_Front["VNet 10.1.0.0/16<br/>Subnet 10.1.1.0/24"]
                 NSG_Front["NSG: Puertos 22 (SSH) y 80 (HTTP)"]
                 PIP_Front["IP Pública Estática Standard"]
-                VM_Front["VM Linux Ubuntu 22.04 LTS<br/>(Standard_B2as_v2)"]
+                VM_Front["VM Linux Ubuntu 22.04 LTS<br/>(Standard_D2as_v7)"]
                 CloudInit_Front["Cloud-Init:<br/>1GB Swap, Nginx, SPA Router<br/>Reverse Proxy /api/ -> Backend:3000"]
                 
                 VNet_Front & NSG_Front & PIP_Front --> VM_Front
@@ -30,7 +30,7 @@ flowchart TD
                 VNet_Back["VNet 10.0.0.0/16<br/>Subnet 10.0.1.0/24"]
                 NSG_Back["NSG: Puertos 22 (SSH) y 3000 (API)"]
                 PIP_Back["IP Pública Estática Standard"]
-                VM_Back["VM Linux Ubuntu 22.04 LTS<br/>(Standard_B2as_v2)"]
+                VM_Back["VM Linux Ubuntu 22.04 LTS<br/>(Standard_D2as_v7)"]
                 CloudInit_Back["Cloud-Init:<br/>1GB Swap, Node.js 20, PM2<br/>Migraciones TypeORM & Seeds"]
                 
                 VNet_Back & NSG_Back & PIP_Back --> VM_Back

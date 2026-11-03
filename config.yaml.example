@@ -5,12 +5,12 @@
 # =============================================================================
 
 azure:
-  location: swedencentral
+  location: eastus2
   environment: dev
   resource_group: rg-pulumi-asistencia-hardware-dev
 
 vm:
-  size: Standard_B2as_v2
+  size: Standard_D2as_v7
   admin_username: azureuser
   # Contraseña de administrador para las VMs (Azure: mín 12 chars, mayús, minús, núm, símb)
   password: TuPasswordSeguro2026!
