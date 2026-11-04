@@ -132,15 +132,12 @@ public class FrontendVmFactory {
                 : "127.0.0.1";
 
             return template
-                .replace("${admin_username}", config.getAdminUsername())
                 .replace("${node_version}",   config.getNodeVersion())
                 .replace("${backend_host}",   cleanBackendHost)
                 .replace("${backend_port}",   config.getAppPort())
                 .replace("${vite_api_url}",   config.getViteApiUrl())
                 .replace("${repo_url}",       config.getFrontendRepoUrl())
-                .replace("${git_branch}",     config.getGitBranch())
-                .replace("${ambiente}",       config.getEnvironment())
-                .replace("${environment}",    config.getEnvironment());
+                .replace("${git_branch}",     config.getGitBranch());
         });
     }
 

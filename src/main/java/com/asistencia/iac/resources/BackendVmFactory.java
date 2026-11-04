@@ -131,7 +131,6 @@ public class BackendVmFactory {
 
             return template
                 .replace("${node_version}",          config.getNodeVersion())
-                .replace("${admin_username}",        config.getAdminUsername())
                 .replace("${repo_url}",              config.getBackendRepoUrl())
                 .replace("${git_branch}",            config.getGitBranch())
                 .replace("${app_port}",              config.getAppPort())
@@ -143,8 +142,7 @@ public class BackendVmFactory {
                 .replace("${admin_registration_no}", config.getAdminRegistrationNo())
                 .replace("${admin_password}",        adminPassword)
                 .replace("${admin_full_name}",       config.getAdminFullName())
-                .replace("${ambiente}",              config.getEnvironment())
-                .replace("${environment}",           config.getEnvironment());
+                .replace("${ambiente}",              config.getEnvironment());
         });
     }
 
