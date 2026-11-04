@@ -140,9 +140,7 @@ public class BackendVmFactory {
                 .replace("${app_timezone}",          config.getAppTimezone())
                 .replace("${run_migrations}",        config.getRunMigrations())
                 .replace("${admin_registration_no}", config.getAdminRegistrationNo())
-                .replace("${admin_password}",        adminPassword)
-                .replace("${admin_full_name}",       config.getAdminFullName())
-                .replace("${ambiente}",              config.getEnvironment());
+                .replace("${admin_password}",        adminPassword);
         });
     }
 
