@@ -9,7 +9,6 @@ write_files:
     permissions: "0600"
     content: |
       PORT=${app_port}
-      NODE_ENV=production
       DATABASE_URL=${database_url}
       JWT_SECRET=${jwt_secret}
       CORS_ORIGIN=${cors_origin}
