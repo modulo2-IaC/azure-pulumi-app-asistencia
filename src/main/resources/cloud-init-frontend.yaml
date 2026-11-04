@@ -4,7 +4,6 @@ packages:
   - nginx
   - git
   - curl
-  - build-essential
 
 write_files:
   - path: /etc/asistencia-frontend.env

@@ -3,7 +3,6 @@ package_update: true
 packages:
   - git
   - curl
-  - build-essential
 
 write_files:
   - path: /etc/asistencia-backend.env
